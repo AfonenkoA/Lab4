@@ -171,20 +171,35 @@ public class GraphicsDisplay extends JPanel
         // Отобразить график
         canvas.draw(graphics);
     }
-
+    boolean checkPoint(Double[] point)
+    {
+        Double y = point[1];
+        StringBuilder sb = new StringBuilder(y.toString());
+        sb.deleteCharAt(sb.indexOf("."));
+        String s = sb.substring(0,Math.min(10,sb.length()));
+        char c = s.charAt(0);
+        int i = 0;
+        while (i<s.length() && c++==s.charAt(i++));
+        if(i != s.length()) return false;
+        return true;
+    }
     // Отображение маркеров точек, по которым рисовался график
     protected void paintMarkers(Graphics2D canvas)
     {
         // Шаг 1 - Установить специальное перо для черчения контуров маркеров
         canvas.setStroke(markerStroke);
         // Выбрать красный цвета для контуров маркеров
-        canvas.setColor(Color.RED);
-        // Выбрать красный цвет для закрашивания маркеров внутри
-        canvas.setPaint(Color.RED);
-        // Шаг 2 - Организовать цикл по всем точкам графика
+        Color defaultColor = Color.RED;
+        Color highlightColor = Color.BLUE;
+        canvas.setColor(defaultColor);
+        canvas.setPaint(defaultColor);
         for (Double[] point : graphicsData)
         {
-            // Центр - в точке (x,y)
+            if(checkPoint(point))
+            {
+                canvas.setColor(highlightColor);
+                canvas.setPaint(highlightColor);
+            }
             Point2D.Double center = xyToPoint(point[0], point[1]);
             Point2D.Double leftTop = shiftPoint(center, -5, -5);
             Point2D.Double leftBot = shiftPoint(center, -5, 5);
@@ -194,11 +209,13 @@ public class GraphicsDisplay extends JPanel
             Point2D.Double centerBot = shiftPoint(center, 0, 5);
             Point2D.Double centerLeft = shiftPoint(center, -5, 0);
             Point2D.Double centerRight = shiftPoint(center, 5, 0);
-            canvas.draw(new Line2D.Double(leftTop,rightBot));
-            canvas.draw(new Line2D.Double(leftBot,rightTop));
-            canvas.draw(new Line2D.Double(centerLeft,centerRight));
-            canvas.draw(new Line2D.Double(centerBot,centerTop));
-            canvas.draw(new Ellipse2D.Double(center.x,center.y,2,2));
+            canvas.draw(new Line2D.Double(leftTop, rightBot));
+            canvas.draw(new Line2D.Double(leftBot, rightTop));
+            canvas.draw(new Line2D.Double(centerLeft, centerRight));
+            canvas.draw(new Line2D.Double(centerBot, centerTop));
+            canvas.draw(new Ellipse2D.Double(center.x, center.y, 2, 2));
+            canvas.setColor(defaultColor);
+            canvas.setPaint(defaultColor);
         }
     }
 
