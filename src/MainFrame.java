@@ -1,7 +1,10 @@
 import java.awt.BorderLayout;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.io.*;
+import java.nio.ByteOrder;
+import java.nio.DoubleBuffer;
+import java.nio.channels.FileChannel;
+
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JCheckBoxMenuItem;
@@ -23,6 +26,7 @@ public class MainFrame extends JFrame
     // Пункты меню
     private final JCheckBoxMenuItem showAxisMenuItem;
     private final JCheckBoxMenuItem showMarkersMenuItem;
+    private final JCheckBoxMenuItem showRotatedMenuItem;
     // Компонент-отображатель графика
     private final GraphicsDisplay display = new GraphicsDisplay();
     // Флаг, указывающий на загруженность данных графика
@@ -55,7 +59,9 @@ public class MainFrame extends JFrame
                     fileChooser.setCurrentDirectory(new File("."));
                 }
                 if (fileChooser.showOpenDialog(MainFrame.this) == JFileChooser.APPROVE_OPTION)
+                {
                     openGraphics(fileChooser.getSelectedFile());
+                }
             }
         };
         // Добавить соответствующий элемент меню
@@ -88,6 +94,15 @@ public class MainFrame extends JFrame
                 display.setShowMarkers(showMarkersMenuItem.isSelected());
             }
         };
+        Action showRotatedAction = new AbstractAction("Повернуть график") {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                display.setRotated(showRotatedMenuItem.isSelected());
+            }
+        };
+        showRotatedMenuItem = new JCheckBoxMenuItem(showRotatedAction);
+        graphicsMenu.add(showRotatedMenuItem);
         showMarkersMenuItem =new JCheckBoxMenuItem(showMarkersAction);
         graphicsMenu.add(showMarkersMenuItem);
         // Элемент по умолчанию включен (отмечен флажком)
@@ -103,32 +118,16 @@ public class MainFrame extends JFrame
     // Считывание данных графика из существующего файла
     protected void openGraphics(File selectedFile)
     {
-        try
+        try(FileChannel fc = new RandomAccessFile(selectedFile, "rw").getChannel())
         {
-            // Шаг 1 - Открыть поток чтения данных, связанный с входным файловым потоком
-            DataInputStream in = new DataInputStream(
-                    new BufferedInputStream(
-                            new FileInputStream(selectedFile)));
-            /* Шаг 2 - Зная объѐм данных в потоке ввода можно вычислить,
-             * сколько памяти нужно зарезервировать в массиве:
-             * * Всего байт в потоке - in.available() байт;
-             * * Размер одного числа Double - Double.SIZE бит, или Double.SIZE/8 байт;
-             * * Так как числа записываются парами, то число пар меньше в 2 раза */
-            Double[][] graphicsData = new Double[in.available() / (Double.SIZE / 8) / 2][];
-
+            DoubleBuffer db = fc.map(FileChannel.MapMode.READ_WRITE, 0, fc.size())
+                    .order(ByteOrder.nativeOrder()).asDoubleBuffer();
+            Double[][] graphicsData = new Double[db.remaining()/2][];
             // Шаг 3 - Цикл чтения данных (пока в потоке есть данные)
             int i = 0;
-            while (in.available() > 0)
-            {
-                // Первой из потока читается координата точки X
-                double x = in.readDouble();
-                // Затем - значение графика Y в точке X
-                double y = in.readDouble();
-                // Прочитанная пара координат добавляется в массив
-                graphicsData[i++] = new Double[]{x, y};
-            }
-            graphicsData = new Double[][]{new Double[]{-2.0,4.0},new Double[]{-1.7894736842105263,3.2022160664819945},new Double[]{-1.5789473684210527,2.4930747922437675},new Double[]{-1.368421052631579,1.8725761772853187},new Double[]{-1.1578947368421053,1.3407202216066483},new Double[]{-0.9473684210526316,0.8975069252077563},new Double[]{-0.736842105263158,0.5429362880886428},new Double[]{-0.5263157894736843,0.27700831024930755},new Double[]{-0.3157894736842106,0.09972299168975075},new Double[]{-0.10526315789473695,0.011080332409972322},new Double[]{0.10526315789473673,0.011080332409972275},new Double[]{0.3157894736842106,0.09972299168975075},new Double[]{0.5263157894736841,0.27700831024930733},new Double[]{0.7368421052631575,0.5429362880886421},new Double[]{0.9473684210526314,0.8975069252077559},new Double[]{1.1578947368421053,1.3407202216066483},new Double[]{1.3684210526315788,1.872576177285318},new Double[]{1.5789473684210522,2.493074792243766},new Double[]{1.789473684210526,3.2022160664819936},new Double[]{2.0,4.0}};
-            // Шаг 4 - Проверка, имеется ли в списке в результате чтения хотя бы одна пара координат
+            while (i < graphicsData.length)
+                graphicsData[i++] = new Double[]{db.get(), db.get()};
+
             if (graphicsData.length > 0)
             {
                 // Да - установить флаг загруженности данных
@@ -137,7 +136,6 @@ public class MainFrame extends JFrame
                 display.showGraphics(graphicsData);
             }
             // Шаг 5 - Закрыть входной поток
-            in.close();
         } catch (FileNotFoundException ex)
         {
             // В случае исключительной ситуации типа "Файл не найден" показать сообщение об ошибке
@@ -159,6 +157,7 @@ private class GraphicsMenuListener implements MenuListener
         // Доступность или недоступность элементов меню "График" определяется загруженностью данных
         showAxisMenuItem.setEnabled(fileLoaded);
         showMarkersMenuItem.setEnabled(fileLoaded);
+        showRotatedMenuItem.setEnabled(fileLoaded);
     }
 
     // Обработчик, вызываемый после того, как меню исчезло с экрана

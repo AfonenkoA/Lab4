@@ -1,10 +1,6 @@
 import java.awt.*;
 import java.awt.font.FontRenderContext;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.GeneralPath;
-import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import java.awt.geom.*;
 import javax.swing.JPanel;
 
 public class GraphicsDisplay extends JPanel
@@ -27,6 +23,7 @@ public class GraphicsDisplay extends JPanel
     private final BasicStroke markerStroke;
     // Различные шрифты отображения надписей
     private final Font axisFont;
+    private boolean isRotated = false;
 
     public GraphicsDisplay()
     {
@@ -67,7 +64,11 @@ public class GraphicsDisplay extends JPanel
         this.showMarkers = showMarkers;
         repaint();
     }
-
+    public void setRotated(boolean rotated)
+    {
+        isRotated = rotated;
+        repaint();
+    }
     // Метод отображения всего компонента, содержащего график
     public void paintComponent(Graphics g)
     {
@@ -124,6 +125,7 @@ public class GraphicsDisplay extends JPanel
         }
         // Шаг 7 - Сохранить текущие настройки холста
         Graphics2D canvas = (Graphics2D) g;
+
         Stroke oldStroke = canvas.getStroke();
         Color oldColor = canvas.getColor();
         Paint oldPaint = canvas.getPaint();
@@ -131,6 +133,14 @@ public class GraphicsDisplay extends JPanel
         // Шаг 8 - В нужном порядке вызвать методы отображения элементов графика
         // Порядок вызова методов имеет значение, т.к. предыдущий рисунок будет затираться последующим
         // Первыми (если нужно) отрисовываются оси координат.
+        if(isRotated)
+        {
+
+            //AffineTransform ntr = new AffineTransform(canvas.getTransform());
+            //canvas.setTransform(ntr);
+            //ntr.scale(0.5,0.5);
+            canvas.rotate(Math.toRadians(-90), getSize().getWidth() / 2, getSize().getHeight() / 2);
+        }
         if (showAxis) paintAxis(canvas);
         // Затем отображается сам график
         paintGraphics(canvas);
@@ -180,8 +190,7 @@ public class GraphicsDisplay extends JPanel
         char c = s.charAt(0);
         int i = 0;
         while (i<s.length() && c++==s.charAt(i++));
-        if(i != s.length()) return false;
-        return true;
+        return i == s.length();
     }
     // Отображение маркеров точек, по которым рисовался график
     protected void paintMarkers(Graphics2D canvas)
