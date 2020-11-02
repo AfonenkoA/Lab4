@@ -1,10 +1,4 @@
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Paint;
-import java.awt.Stroke;
+import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.GeneralPath;
@@ -189,20 +183,21 @@ public class GraphicsDisplay extends JPanel
         // Шаг 2 - Организовать цикл по всем точкам графика
         for (Double[] point : graphicsData)
         {
-            // Инициализировать эллипс как объект для представления маркера
-            Ellipse2D.Double marker = new Ellipse2D.Double();
-            /* Эллипс будет задаваться посредством указания координат его центра и угла прямоугольника, в который он
-            вписан */
             // Центр - в точке (x,y)
             Point2D.Double center = xyToPoint(point[0], point[1]);
-            // Угол прямоугольника - отстоит на расстоянии (3,3)
-            Point2D.Double corner = shiftPoint(center, 3, 3);
-            // Задать эллипс по центру и диагонали
-            marker.setFrameFromCenter(center, corner);
-            canvas.draw(marker);
-            // Начертить контур маркера
-            canvas.fill(marker);
-            // Залить внутреннюю область маркера
+            Point2D.Double leftTop = shiftPoint(center, -5, -5);
+            Point2D.Double leftBot = shiftPoint(center, -5, 5);
+            Point2D.Double rightTop = shiftPoint(center, 5, -5);
+            Point2D.Double rightBot = shiftPoint(center, 5, 5);
+            Point2D.Double centerTop = shiftPoint(center, 0, -5);
+            Point2D.Double centerBot = shiftPoint(center, 0, 5);
+            Point2D.Double centerLeft = shiftPoint(center, -5, 0);
+            Point2D.Double centerRight = shiftPoint(center, 5, 0);
+            canvas.draw(new Line2D.Double(leftTop,rightBot));
+            canvas.draw(new Line2D.Double(leftBot,rightTop));
+            canvas.draw(new Line2D.Double(centerLeft,centerRight));
+            canvas.draw(new Line2D.Double(centerBot,centerTop));
+            canvas.draw(new Ellipse2D.Double(center.x,center.y,2,2));
         }
     }
 
