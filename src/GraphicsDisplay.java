@@ -34,7 +34,8 @@ public class GraphicsDisplay extends JPanel
         setBackground(Color.WHITE);
         // Сконструировать необходимые объекты, используемые в рисовании
         // Перо для рисования графика
-        graphicsStroke = new BasicStroke(2.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10.0f, null, 0.0f);
+        float[] graphDash = new float[]{4,1,1,1,1,1,2,1,2};
+        graphicsStroke = new BasicStroke(2.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10.0f, graphDash, 0.0f);
         // Перо для рисования осей координат
         axisStroke = new BasicStroke(2.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, null, 0.0f);
         // Перо для рисования контуров маркеров
