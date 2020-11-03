@@ -27,6 +27,7 @@ public class MainFrame extends JFrame
     private final JCheckBoxMenuItem showAxisMenuItem;
     private final JCheckBoxMenuItem showMarkersMenuItem;
     private final JCheckBoxMenuItem showRotatedMenuItem;
+    private final JCheckBoxMenuItem showFillingMenuItem;
     // Компонент-отображатель графика
     private final GraphicsDisplay display = new GraphicsDisplay();
     // Флаг, указывающий на загруженность данных графика
@@ -101,6 +102,15 @@ public class MainFrame extends JFrame
                 display.setRotated(showRotatedMenuItem.isSelected());
             }
         };
+        Action showFillingAction = new AbstractAction("Определить замкнутые области") {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                display.setShowFilling(showFillingMenuItem.isSelected());
+            }
+        };
+        showFillingMenuItem = new JCheckBoxMenuItem(showFillingAction);
+        graphicsMenu.add(showFillingMenuItem);
         showRotatedMenuItem = new JCheckBoxMenuItem(showRotatedAction);
         graphicsMenu.add(showRotatedMenuItem);
         showMarkersMenuItem =new JCheckBoxMenuItem(showMarkersAction);
@@ -158,6 +168,7 @@ private class GraphicsMenuListener implements MenuListener
         showAxisMenuItem.setEnabled(fileLoaded);
         showMarkersMenuItem.setEnabled(fileLoaded);
         showRotatedMenuItem.setEnabled(fileLoaded);
+        showFillingMenuItem.setEnabled(fileLoaded);
     }
 
     // Обработчик, вызываемый после того, как меню исчезло с экрана

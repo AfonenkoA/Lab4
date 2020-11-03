@@ -1,6 +1,13 @@
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.*;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import javax.swing.JPanel;
 
 public class GraphicsDisplay extends JPanel
@@ -24,6 +31,7 @@ public class GraphicsDisplay extends JPanel
     // Различные шрифты отображения надписей
     private final Font axisFont;
     private boolean isRotated = false;
+    private boolean showFilling = false;
 
     public GraphicsDisplay()
     {
@@ -135,18 +143,20 @@ public class GraphicsDisplay extends JPanel
         // Первыми (если нужно) отрисовываются оси координат.
         if(isRotated)
         {
-
             //AffineTransform ntr = new AffineTransform(canvas.getTransform());
             //canvas.setTransform(ntr);
             //ntr.scale(0.5,0.5);
             canvas.rotate(Math.toRadians(-90), getSize().getWidth() / 2, getSize().getHeight() / 2);
         }
+        if(showFilling) paintFilling(canvas);
         if (showAxis) paintAxis(canvas);
         // Затем отображается сам график
         paintGraphics(canvas);
         // Затем (если нужно) отображаются маркеры точек, по которым строился график.
         if (showMarkers) paintMarkers(canvas);
         // Шаг 9 - Восстановить старые настройки холста
+
+
         canvas.setFont(oldFont);
         canvas.setPaint(oldPaint);
         canvas.setColor(oldColor);
@@ -181,6 +191,7 @@ public class GraphicsDisplay extends JPanel
         // Отобразить график
         canvas.draw(graphics);
     }
+
     boolean checkPoint(Double[] point)
     {
         Double y = point[1];
@@ -227,7 +238,90 @@ public class GraphicsDisplay extends JPanel
             canvas.setPaint(defaultColor);
         }
     }
+    private double calcArea(ArrayList<Double[]> polygon)
+    {
+        double sum = 0.0;
+        for (int i = 2; i < polygon.size()-3;i++)
+            sum += 2*polygon.get(i)[1];
+        sum += polygon.get(1)[1];
+        sum += polygon.get(polygon.size()-2)[1];
+        return (polygon.get(2)[0]-polygon.get(1)[0])/2*sum;
+    }
+    protected void paintFilling(Graphics2D canvas)
+    {
+        ArrayList<Double[]> points = new ArrayList<>(Arrays.asList(graphicsData));
+        ArrayList<Integer> zeroes = new ArrayList<>();
 
+        int i = 0;
+        while (i < points.size()-1)
+        {
+            Double x1 = points.get(i)[0];
+            Double x2 = points.get(i+1)[0];
+            Double y1 = points.get(i)[1];
+            Double y2 = points.get(i+1)[1];
+            if(Math.signum(y2)==0.0)
+                zeroes.add(i+2);
+            if (Math.signum(y1) * Math.signum(y2) == -1.0)
+            {
+                zeroes.add(i);
+                points.add(i, new Double[]{(x2 * y1 - x1 * y2) / (y1 - y2), 0.0});
+            }
+            i++;
+        }
+        points.add(0,new Double[]{points.get(0)[0],0.0});
+        zeroes.add(0,0);
+        points.add(new Double[]{points.get(points.size()-1)[0],0.0});
+        zeroes.add(points.size()-1);
+        ArrayList<ArrayList<Double[]>> polygons = new ArrayList<>();
+
+        for(int in = 0; in < zeroes.size()-1; in++)
+            polygons.add(new ArrayList<>(points.subList(zeroes.get(in),zeroes.get(in + 1)+1)));
+
+        DecimalFormat formatter = (DecimalFormat) NumberFormat.getInstance();
+        formatter.setMaximumFractionDigits(5);
+        formatter.setGroupingUsed(false);
+        DecimalFormatSymbols dottedDouble = formatter.getDecimalFormatSymbols();
+        dottedDouble.setDecimalSeparator('.');
+        formatter.setDecimalFormatSymbols(dottedDouble);
+
+        for (ArrayList<Double[]> polygon : polygons)
+        {
+            GeneralPath gp = new GeneralPath();
+
+            double area = calcArea(polygon);
+            boolean firstPoint = true;
+            for (Double[] point : polygon)
+            {
+                Point2D.Double p = xyToPoint(point[0],point[1]);
+                if(firstPoint)
+                {
+                    gp.moveTo(p.x, p.y);
+                    firstPoint = false;
+                }
+                else gp.lineTo(p.x,p.y);
+            }
+            gp.closePath();
+            canvas.setStroke(graphicsStroke);
+            canvas.setColor(Color.GREEN);
+            canvas.draw(gp);
+            canvas.setColor(Color.GREEN);
+            canvas.fill(gp);
+            Rectangle2D bounds = gp.getBounds2D();
+            double y = bounds.getMaxY() - (bounds.getMaxY() - bounds.getMinY())/2;
+            double delta = (bounds.getMaxX()-bounds.getMinX())/10;
+            for(double x = bounds.getMinX()+2*delta; x <= bounds.getMaxX(); x += delta)
+            {
+                if(gp.contains(x,y))
+                {
+                    canvas.setFont(axisFont);
+                    canvas.setColor(Color.BLACK);
+                    canvas.drawString(formatter.format(area),(float) x,(float) y);
+                    break;
+                }
+            }
+
+        }
+    }
     // Метод, обеспечивающий отображение осей координат
     protected void paintAxis(Graphics2D canvas)
     {
@@ -245,10 +339,10 @@ public class GraphicsDisplay extends JPanel
         if (minX <= 0.0 && maxX >= 0.0)
         {
             // Она должна быть видна, если левая граница показываемой области (minX) <= 0.0,
-// а правая (maxX) >= 0.0 
-// Сама ось - это линия между точками (0, maxY) и (0, minY) 
+            // а правая (maxX) >= 0.0
+            // Сама ось - это линия между точками (0, maxY) и (0, minY)
             canvas.draw(new Line2D.Double(xyToPoint(0, maxY), xyToPoint(0, minY)));
-// Стрелка оси Y 
+            // Стрелка оси Y
             GeneralPath arrow = new GeneralPath();
             // Установить начальную точку ломаной точно на верхний конец оси Y
             Point2D.Double lineEnd = xyToPoint(0, maxY);
@@ -326,5 +420,11 @@ public class GraphicsDisplay extends JPanel
         // Задать еѐ координаты как координаты существующей точки + заданные смещения
         dest.setLocation(src.getX() + deltaX, src.getY() + deltaY);
         return dest;
+    }
+
+    public void setShowFilling(boolean showFilling)
+    {
+        this.showFilling = showFilling;
+        repaint();
     }
 }
